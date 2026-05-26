@@ -1,0 +1,306 @@
+/* style.css */
+:root {
+    --bg-color: #f8f9fa;
+    --card-bg: #ffffff;
+    --text-main: #212529;
+    --text-muted: #6c757d;
+    --border-color: #dee2e6;
+    
+    --primary: #0d6efd;
+    --primary-hover: #0b5ed7;
+    --secondary: #495057;
+    --secondary-hover: #343a40;
+    
+    --success: #198754;
+    --success-bg: #d1e7dd;
+    --danger: #dc3545;
+    --danger-bg: #f8d7da;
+    
+    --code-bg: #1e1e1e;
+    --code-text: #f8f8f2;
+    
+    --radius: 8px;
+    --transition: all 0.2s ease-in-out;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    line-height: 1.6;
+    padding-top: 70px; /* Espace pour la navbar fixe */
+}
+
+/* Barre de navigation / Outils globale */
+.quiz-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-color: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 1000;
+}
+
+.nav-container {
+    max-width: 800px;
+    margin: 0 auto;
+    height: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.quiz-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--primary);
+}
+
+.nav-controls {
+    display: flex;
+    gap: 10px;
+}
+
+/* Conteneur principal */
+.quiz-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* Barre de progression */
+.quiz-progress-bar {
+    margin-bottom: 25px;
+}
+
+#progress-text {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.progress-track {
+    width: 100%;
+    height: 6px;
+    background-color: var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#progress-fill {
+    width: 0%;
+    height: 100%;
+    background-color: var(--primary);
+    transition: width 0.3s ease;
+}
+
+/* Carte de Question (Zone dynamique) */
+.question-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    margin-bottom: 20px;
+}
+
+.question-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.question-append {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+/* Blocs de code (Bash / Snippets) */
+pre {
+    background-color: var(--code-bg);
+    color: var(--code-text);
+    padding: 15px;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.95rem;
+    margin: 15px 0;
+}
+
+/* Groupe d'options QCM */
+.options-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.option-btn {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    text-align: left;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    width: 100%;
+}
+
+.option-btn:hover:not(:disabled) {
+    background-color: #f1f3f5;
+    border-color: #bcd1ee;
+}
+
+/* États de validation QCM */
+.option-btn.correct {
+    background-color: var(--success-bg) !important;
+    border-color: var(--success) !important;
+    color: var(--success);
+    font-weight: 600;
+}
+
+.option-btn.wrong {
+    background-color: var(--danger-bg) !important;
+    border-color: var(--danger) !important;
+    color: var(--danger);
+}
+
+.option-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+/* Zone Question Ouverte (Option A) */
+.open-answer-zone {
+    margin-top: 20px;
+}
+
+.answer-input {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 15px;
+}
+
+.answer-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+
+.solution-box {
+    background-color: #e9ecef;
+    border-left: 4px solid var(--secondary);
+    padding: 15px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    margin: 20px 0;
+}
+
+.solution-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: var(--secondary);
+    margin-bottom: 5px;
+}
+
+.self-eval-zone {
+    display: flex;
+    gap: 15px;
+    margin-top: 15px;
+    align-items: center;
+}
+
+.self-eval-prompt {
+    font-weight: 500;
+    color: var(--secondary);
+}
+
+/* Boutons */
+.btn {
+    padding: 10px 20px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: white;
+}
+.btn-primary:hover { background-color: var(--primary-hover); }
+
+.btn-secondary {
+    background-color: #e9ecef;
+    color: var(--secondary);
+}
+.btn-secondary:hover { background-color: #dee2e6; }
+
+.btn-filter {
+    background-color: #fff3cd;
+    color: #664d03;
+    border: 1px solid #ffe69c;
+}
+.btn-filter:hover { background-color: #ffecb5; }
+
+.btn-success {
+    background-color: var(--success);
+    color: white;
+}
+.btn-success:hover { background-color: #157347; }
+
+.btn-danger {
+    background-color: var(--danger);
+    color: white;
+}
+.btn-danger:hover { background-color: #bb2d3b; }
+
+/* Zone de Navigation Basse */
+.navigation-zone {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+/* Écran Final / Résultats */
+.score-value {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--primary);
+    margin: 20px 0;
+    text-align: center;
+}
+
+.final-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+/* Utilitaires */
+.hidden {
+    display: none !important;
+}

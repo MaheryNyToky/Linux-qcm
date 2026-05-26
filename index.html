@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz & Révisions : Administration Système Linux</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="quiz-navbar">
+        <div class="nav-container">
+            <div class="quiz-title">Validation Bash & Systemd</div>
+            <div class="nav-controls">
+                <button id="btn-restart-all" class="btn btn-secondary">Recommencer tout</button>
+                <button id="btn-filter-errors" class="btn btn-filter">Session Erreurs / Non répondus</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="quiz-container">
+        <div class="quiz-progress-bar">
+            <span id="progress-text">Question 1 / 137</span>
+            <div class="progress-track">
+                <div id="progress-fill"></div>
+            </div>
+        </div>
+
+        <section id="question-card" class="question-card">
+            </section>
+
+        <div class="navigation-zone">
+            <button id="btn-next" class="btn btn-primary hidden">Question suivante →</button>
+        </div>
+    </main>
+
+    <script src="questions.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
