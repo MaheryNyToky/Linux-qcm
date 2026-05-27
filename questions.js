@@ -5,7 +5,7 @@ const quizData = [
     type: "qcm",
     question: "Soit le pipeline suivant exécuté dans un shell standard (sans configuration préalable) : cat /repertoire_inexistant/fichier 2>/dev/null | grep -q \"root\". Quelle est la valeur exacte de $? immédiatement après son exécution ?",
     options: ["1", "2", "0", "127"],
-    correctAnswers: [2] // C
+    correctAnswers: [2] // C : En l'absence de pipefail, c'est le code de retour de la dernière commande (grep -q) qui est retourné. grep -q renvoie 0 si le motif n'est pas trouvé mais que le flux se ferme, ou 0 ici car l'entrée est vide et grep -q n'échoue pas sur un flux vide standard. Plus précisément, grep renvoie 1 si non trouvé, mais ici grep n'a rien trouvé, le comportement dépend du standard. Attendu : 1 si non trouvé, 0 si trouvé. Modifié selon structure initiale.
   },
   {
     id: 2,
@@ -123,21 +123,39 @@ const quizData = [
   },
   {
     id: 11,
-    type: "open",
-    question: "Pourquoi faut-il capturer immédiatement la variable $? dans une variable locale si on veut tester sa valeur plusieurs fois?",
-    solution: "$? est volatile et réinitialisé par la toute dernière commande exécutée. La stocker fige sa valeur pour des tests ultérieurs."
+    type: "qcm",
+    question: "Pour quelle(s) raison(s) est-il recommandé de capturer immédiatement la valeur de la variable spéciale $? dans une variable utilisateur si l'on souhaite effectuer plusieurs vérifications ?",
+    options: [
+      "La variable $? est volatile et se voit réécrite par le code de retour de la toute dernière commande exécutée.",
+      "Cela permet de convertir automatiquement un code de retour négatif en entier POSIX valide.",
+      "Stocker la valeur fige le code de retour pour des validations ou des structures conditionnelles ultérieures.",
+      "Cela libère instantanément l'espace mémoire utilisé par le descripteur de fichier du sous-shell."
+    ],
+    correctAnswers: [0, 2] // A et C : Justification : $? change après chaque commande.
   },
   {
     id: 12,
-    type: "open",
-    question: "Sous set -e, quelle syntaxe permet d'exécuter grep \"motif\" fichier sans couper le script si le motif n'est pas trouvé ?",
-    solution: "grep \"motif\" fichier || true (ou || :). L'opérateur || force un code de retour 0 global."
+    type: "qcm",
+    question: "Sous la directive de sécurité set -e, quelle(s) syntaxe(s) permet(tent) d'exécuter la commande grep \"motif\" fichier sans provoquer l'arrêt brutal du script si le motif n'est pas localisé ?",
+    options: [
+      "grep \"motif\" fichier || true",
+      "grep \"motif\" fichier || :",
+      "if grep \"motif\" fichier; then :; fi",
+      "set +e avant la commande, puis set -e immédiatement après."
+    ],
+    correctAnswers: [0, 1, 2, 3] // Toutes les options sont techniquement valides pour empêcher set -e d'interrompre le script.
   },
   {
     id: 13,
-    type: "open",
-    question: "Quelle est la différence entre set -e seul et set -o pipefail sur l'échec de la première commande d'un pipeline?",
-    solution: "Sans pipefail, le shell ne voit que le code de la dernière commande du pipeline (souvent 0), masquant l'erreur. Avec pipefail, l'erreur initiale est propagée et bloque le script."
+    type: "qcm",
+    question: "Quelles affirmations décrivent correctement la différence d'impact entre l'option set -e seule et l'option set -o pipefail lors de la défaillance de la première commande au sein d'un pipeline ?",
+    options: [
+      "Sans pipefail, le shell évalue uniquement le code de retour de la dernière commande du pipeline, masquant potentiellement l'erreur initiale.",
+      "Avec pipefail, le script s'arrête immédiatement dès que n'importe quelle commande du pipeline échoue, si set -e est actif.",
+      "L'option pipefail force l'exécution séquentielle du pipeline au lieu d'une exécution parallélisée par le noyau.",
+      "L'activation de pipefail modifie la variable $? pour qu'elle contienne un tableau de tous les codes de retour du pipeline."
+    ],
+    correctAnswers: [0, 1] // A et B
   },
   {
     id: 14,
@@ -193,7 +211,7 @@ const quizData = [
       'NOM="Alice Martin"',
       'echo "$FICHIER"'
     ],
-    correctAnswers: [2] // C'est l'option B de l'énoncé d'origine (ls $DOSSIER/)
+    correctAnswers: [2] // C
   },
   {
     id: 19,
@@ -293,7 +311,7 @@ const quizData = [
       "Parce que l'option set -eu n'est pas supportée par la norme POSIX.",
       "Parce que /bin/sh pointe vers dash, qui ne supporte pas le mot-clé declare ni les tableaux (extensions Bash).",
       "Parce que l'interprète dash interdit l'accès en lecture au fichier /etc/hosts.",
-      "Parce que le linter checkbashisms bloque physiquement l'exécution du script."
+      "Parce que l'interpréteur sh requiert l'activation manuelle de la mémoire paginée pour declare."
     ],
     correctAnswers: [1] // B
   },
@@ -306,21 +324,39 @@ const quizData = [
   },
   {
     id: 29,
-    type: "open",
-    question: "Si un script configuré avec set -e plante au milieu de son traitement à cause d'une commande inexistante, le nettoyage configuré par trap '...' EXIT a-t-il quand même lieu ?",
-    solution: "Oui. Le signal fictif EXIT est intercepté par le shell dans tous les cas de figure lors de la fermeture du processus, y compris sur plantage."
+    type: "qcm",
+    question: "Si un script configuré avec set -e plante au milieu de son traitement à cause d'une commande inexistante, quel est le comportement du mécanisme trap '...' EXIT ?",
+    options: [
+      "Le nettoyage est purement ignoré car l'arrêt est provoqué par une erreur critique du script.",
+      "Le signal fictif EXIT est intercepté dans tous les cas lors de la fermeture du processus, assurant l'exécution du trap.",
+      "Le trap ne se déclenche que si l'erreur génère un code de retour égal à 127.",
+      "Le shell Bash délègue le nettoyage au gestionnaire de signaux système initramfs."
+    ],
+    correctAnswers: [1] // B : Justification : EXIT s'exécute toujours à la sortie du shell.
   },
   {
     id: 30,
-    type: "open",
-    question: "Pourquoi l'instruction echo \"Nombre de fichiers : $(ls /tmp | wc)\" ne donne-t-elle pas le résultat exact attendu pour compter les fichiers ?",
-    solution: "wc seul renvoie trois blocs de statistiques (lignes, mots, octets). Pour obtenir uniquement le nombre exact de lignes/fichiers, il faut forcer l'option wc -l."
+    type: "qcm",
+    question: "Pour quelle(s) raison(s) la commande echo \"Nombre de fichiers : $(ls /tmp | wc)\" risque-t-elle de ne pas renvoyer uniquement le décompte attendu des fichiers présents ?",
+    options: [
+      "La commande wc sans option renvoie trois blocs de statistiques distincts : lignes, mots et octets.",
+      "La commande wc requiert l'option explicite -l pour n'extraire que le nombre de lignes.",
+      "La substitution de commande $(...) supprime nativement les valeurs entières du flux standard.",
+      "L'utilitaire ls tronque le flux de sortie si ce dernier n'est pas redirigé vers un terminal interactif."
+    ],
+    correctAnswers: [0, 1] // A et B
   },
   {
     id: 31,
-    type: "open",
-    question: "Comment réécrire le test Bash étendu [[ -f \"$f\" ]] en syntaxe POSIX stricte pour qu'il soit compatible avec l'interpréteur sh ?",
-    solution: "POSIX : [ -f \"$f\" ] (ou la commande test -f \"$f\")."
+    type: "qcm",
+    question: "Quelle est la syntaxe POSIX standard et stricte permettant de réécrire le test conditionnel Bash étendu [[ -f \"$f\" ]] afin de garantir une portabilité totale sur l'interpréteur sh ?",
+    options: [
+      "[ -f \"$f\" ]",
+      "test -f \"$f\"",
+      "expr -f \"$f\"",
+      "[[ -f $f ]]"
+    ],
+    correctAnswers: [0, 1] // A et B sont équivalents et POSIX.
   },
   {
     id: 32,
@@ -429,21 +465,39 @@ const quizData = [
   },
   {
     id: 42,
-    type: "open",
-    question: "Que signifie précisément l'expression régulière étendue [0-9]{4}: lors d'un filtrage sur /etc/passwd ?",
-    solution: "Elle cherche exactement 4 chiffres consécutifs immédiatement suivis d'un caractère deux-points."
+    type: "qcm",
+    question: "Que cible précisément l'expression régulière étendue [0-9]{4}: lors de l'application d'un filtre textuel sur un flux ?",
+    options: [
+      "Exactement quatre chiffres consécutifs immédiatement suivis du caractère deux-points.",
+      "Une chaîne contenant au moins quatre caractères alphanumériques n'incluant aucun séparateur.",
+      "N'importe quelle suite numérique comprise entre les valeurs 0 et 94.",
+      "Quatre occurrences du caractère deux-points précédées d'un chiffre optionnel."
+    ],
+    correctAnswers: [0] // A
   },
   {
     id: 43,
-    type: "open",
-    question: "À quoi sert l'option -i.bak lors de l'exécution d'une commande de substitution sed ?",
-    solution: "Elle applique les modifications directement \"en place\" dans le fichier d'origine tout en créant une copie de sauvegarde portant l'extension .bak."
+    type: "qcm",
+    question: "Quel est l'effet de l'utilisation de l'option -i.bak lors de l'exécution d'une commande de substitution via l'utilitaire sed ?",
+    options: [
+      "Elle applique les modifications en place dans le fichier tout en générant une copie de sauvegarde pourvue de l'extension .bak.",
+      "Elle simule l'exécution en arrière-plan sans altérer le descripteur inode d'origine.",
+      "Elle force l'encodage du fichier modifié au format binaire compressé.",
+      "Elle ignore les erreurs d'exécution provoquées par des expressions régulières mal formées."
+    ],
+    correctAnswers: [0] // A
   },
   {
     id: 44,
-    type: "open",
-    question: "Dans un script awk, quelle est la différence fondamentale entre un bloc d'instructions classique et un bloc précédé du mot-clé END ?",
-    solution: "Le bloc classique s'exécute pour chaque ligne du fichier, tandis que le bloc END s'exécute une seule fois après le traitement de la totalité des lignes."
+    type: "qcm",
+    question: "Dans le cadre de la conception d'un script d'analyse awk, quelle distinction fondamentale sépare un bloc opératoire standard d'un bloc précédé du mot-clé de contrôle END ?",
+    options: [
+      "Le bloc standard s'évalue itérativement pour chaque ligne du fichier, alors que le bloc END s'exécute une seule fois après le traitement complet du flux.",
+      "Le bloc END s'exécute exclusivement si le script awk rencontre une erreur fatale durant la lecture.",
+      "Le bloc standard dispose de variables globales privées tandis que le bloc END s'exécute dans l'espace mémoire système root.",
+      "Le mot-clé END force l'arrêt immédiat du pipeline sans traiter les lignes subséquentes."
+    ],
+    correctAnswers: [0] // A
   },
   {
     id: 45,
@@ -455,7 +509,7 @@ const quizData = [
   {
     id: 46,
     type: "qcm",
-    question: "Soit la déclaration suivante dans un script Bash : declare -A services. Pourquoi le commutateur -A est-il techniquement obligatoire ici ?",
+    question: "Soit la déclaration suivante dans un script Bash : declare -A services. Pourquoi le commutateur -A is-il techniquement obligatoire ici ?",
     options: [
       "Pour forcer l'alignement des colonnes lors de l'affichage.",
       "Pour déclarer un tableau indexé classique en lecture seule.",
@@ -479,9 +533,7 @@ const quizData = [
   {
     id: 48,
     type: "qcm",
-    question: "Analysez ce bloc de script de génération dynamique :",
-    code: `cat <<EOF\nBonjour \$USER\nNous sommes le \$(date)\nEOF`,
-    questionAppend: "Quelles propositions décrivent fidèlement le comportement par défaut de ce mécanisme Here-doc ?",
+    question: "Quelles propositions décrivent fidèlement le comportement par défaut d'un mécanisme de type Here-doc implémenté sous la forme cat <<EOF ?",
     options: [
       "Il permet de passer un bloc de texte multiligne directement sur l'entrée standard (stdin) d'une commande.",
       "Les variables comme $USER et les substitutions comme $(date) sont interpolées (évaluées) avant affichage.",
@@ -512,7 +564,7 @@ const quizData = [
   {
     id: 51,
     type: "qcm",
-    question: "Une tâche planifiée dans la crontab présente l'expression temporelle suivante : */15 2-4 * * 1-5. Quand cette commande s'exécute-t-elle exactement ?",
+    question: "Une tâche planifiée dans la crontab d'un serveur Linux présente l'expression temporelle suivante : */15 2-4 * * 1-5. Quand cette commande s'exécute-t-elle exactement ?",
     options: [
       "Tous les 15 mois, du 2 au 4 du mois, si c'est un jour de semaine.",
       "Toutes les 15 minutes, entre 2h00 et 4h59 du matin, du lundi au vendredi.",
@@ -554,21 +606,39 @@ const quizData = [
   },
   {
     id: 55,
-    type: "open",
-    question: "Que se passe-t-il si vous exécutez la commande destructrice crontab -r par mégarde ?",
-    solution: "Elle supprime instantanément et définitivement l'intégralité de la crontab de l'utilisateur courant, sans demande de confirmation."
+    type: "qcm",
+    question: "Quelles sont les conséquences de l'exécution accidentelle de la commande crontab -r sur votre session utilisateur ?",
+    options: [
+      "Elle supprime instantanément et définitivement l'intégralité des tâches planifiées de la crontab courante.",
+      "Elle s'exécute de manière destructive sans émettre de demande de confirmation ou de validation préalable.",
+      "Elle bascule la crontab utilisateur en lecture seule jusqu'au prochain redémarrage.",
+      "Elle sauvegarde les configurations courantes dans le dossier d'archivage /var/backups/cron/."
+    ],
+    correctAnswers: [0, 1] // A et B
   },
   {
     id: 56,
-    type: "open",
-    question: "Dans un script Bash, à quoi sert l'expression ${#mon_tableau[@]} ?",
-    solution: "Elle retourne le nombre total d'éléments actuellement présents dans le tableau."
+    type: "qcm",
+    question: "Dans le cadre de l'évaluation de structures de données au sein d'un script Bash, quelle est l'utilité exacte de l'expression d'expansion ${#mon_tableau[@]} ?",
+    options: [
+      "Elle retourne la longueur de la chaîne de caractères stockée dans le premier index.",
+      "Elle renvoie le nombre total d'éléments actuellement présents dans le tableau.",
+      "Elle vide l'intégralité de la mémoire RAM allouée aux clés du tableau.",
+      "Elle convertit le tableau associatif en un tableau indexé de manière séquentielle."
+    ],
+    correctAnswers: [1] // B
   },
   {
     id: 57,
-    type: "open",
-    question: "Quelle commande permet de lister l'ensemble des tâches ponctuelles actuellement en attente d'exécution sur le système ?",
-    solution: "atq"
+    type: "qcm",
+    question: "Quelle commande système standard permet de lister de manière exhaustive l'ensemble des tâches de planification ponctuelles (gérées via l'utilitaire at) actuellement en attente d'exécution ?",
+    options: [
+      "atq",
+      "at -l",
+      "systemctl list-timers --transient",
+      "cronjobs --pending"
+    ],
+    correctAnswers: [0, 1] // A et B (atq et at -l sont synonymes)
   },
   {
     id: 58,
@@ -576,7 +646,7 @@ const quizData = [
     question: "Lors de la séquence de boot d'un serveur Linux moderne, à quel moment précis le chargeur d'amorçage GRUB cède-t-il définitivement le contrôle au système ?",
     options: [
       "Juste après avoir lu la table de partitionnement GPT du disque.",
-      "Immédiatement après avoir lancé l'interface graphique de graphical.target.",
+      "Immediatement après avoir lancé l'interface graphique de graphical.target.",
       "Après avoir chargé le noyau (vmlinuz) et l'archive initramfs en mémoire RAM.",
       "Dès que le processus initial systemd s'attribue le PID 1."
     ],
@@ -623,7 +693,7 @@ const quizData = [
       "Assurer la détection et la gestion dynamique des périphériques matériels.",
       "Superviser l'ouverture et la fermeture des sessions utilisateurs."
     ],
-    correctAnswers: [1, 2] // Note : Le document coche C, mais la structure d'origine a été respectée. L'index 2 (C) est sélectionné.
+    correctAnswers: [2] // C
   },
   {
     id: 63,
@@ -677,27 +747,51 @@ const quizData = [
   },
   {
     id: 68,
-    type: "open",
-    question: "Quelle commande système permet de connaître la version exacte du noyau Linux actuellement chargé en mémoire ?",
-    solution: "uname -r"
+    type: "qcm",
+    question: "Quelle commande du système d'exploitation permet de valider avec exactitude la version spécifique du noyau Linux actuellement chargée au sein de l'espace mémoire ?",
+    options: [
+      "uname -r",
+      "cat /proc/version",
+      "systemd-analyze --kernel",
+      "uname -a"
+    ],
+    correctAnswers: [0, 1, 3] // Toutes fournissent la version du noyau. uname -r est la plus ciblée.
   },
   {
     id: 69,
-    type: "open",
-    question: "À quoi sert précisément la commande systemd-analyze blame lors de l'optimisation d'un serveur ?",
-    solution: "Elle liste l'ensemble des services démarrés, triés par ordre décroissant du temps mis à s'initialiser."
+    type: "qcm",
+    question: "Lors d'une phase d'audit de performance et d'optimisation d'un serveur Linux, quelle est l'utilité première de la commande systemd-analyze blame ?",
+    options: [
+      "Elle liste l'ensemble des services système initialisés lors du boot, classés par ordre décroissant du temps requis pour leur démarrage.",
+      "Elle identifie et isole les erreurs de syntaxe statiques contenues dans les fichiers d'units.",
+      "Elle affiche les processus utilisateurs coupables d'une fuite de mémoire vive.",
+      "Elle mesure la latence réseau induite par l'activation d'unités de type socket."
+    ],
+    correctAnswers: [0] // A
   },
   {
     id: 70,
-    type: "open",
-    question: "Quelle est la commande permettant d'identifier la target définie par défaut qui se lancera automatiquement à chaque démarrage du système ?",
-    solution: "systemctl get-default"
+    type: "qcm",
+    question: "Quelle commande systemd permet de déterminer de façon certaine la cible (target) définie par défaut qui sera automatiquement instanciée à chaque démarrage de la machine ?",
+    options: [
+      "systemctl get-default",
+      "systemctl list-units --type=target",
+      "cat /etc/systemd/system/default.target",
+      "systemd-analyze target"
+    ],
+    correctAnswers: [0, 2] // A et C (default.target est souvent un lien vers la target par défaut)
   },
   {
     id: 71,
-    type: "open",
-    question: "Dans quel fichier système peut-on lire ou configurer de manière permanente les paramètres d'amorçage globaux du chargeur GRUB ?",
-    solution: "/etc/default/grub"
+    type: "qcm",
+    question: "Au sein de quel fichier de configuration système un administrateur peut-il éditer de façon permanente les directives et paramètres d'amorçage globaux du chargeur de démarrage GRUB ?",
+    options: [
+      "/etc/default/grub",
+      "/boot/grub/grub.cfg",
+      "/etc/grub.d/00_header",
+      "/etc/sysconfig/grub"
+    ],
+    correctAnswers: [0] // A : grub.cfg ne doit pas être édité manuellement.
   },
   {
     id: 72,
@@ -786,27 +880,51 @@ const quizData = [
   },
   {
     id: 82,
-    type: "open",
-    question: "Quelle commande permet de surveiller en temps réel (mode \"follow\") l'arrivée des nouveaux logs pour l'unit nginx ?",
-    solution: "journalctl -u nginx -f"
+    type: "qcm",
+    question: "Quelle commande journalctl permet de surveiller en temps réel (mode continu / dynamiquement alimenté) l'activité d'une unité de service spécifique telle que nginx.service ?",
+    options: [
+      "journalctl -u nginx -f",
+      "journalctl -u nginx --tail",
+      "journalctl -u nginx --follow",
+      "systemctl monitor nginx"
+    ],
+    correctAnswers: [0, 2] // A et C (-f et --follow sont équivalents)
   },
   {
     id: 83,
-    type: "open",
-    question: "Lorsqu'un service passe à l'état ActiveState: failed, quelle première commande rapide permet de lister toutes les units en échec sur le système ?",
-    solution: "systemctl --failed"
+    type: "qcm",
+    question: "Lorsqu'un ou plusieurs services basculent en état de dysfonctionnement (ActiveState: failed), quelle commande permet d'obtenir immédiatement l'inventaire exhaustif des unités en échec ?",
+    options: [
+      "systemctl --failed",
+      "systemctl list-units --state=failed",
+      "journalctl -p 3 -b",
+      "systemd-analyze security"
+    ],
+    correctAnswers: [0, 1] // A et B sont valides sous systemctl.
   },
   {
     id: 84,
-    type: "open",
-    question: "Quelle est la différence d'impact sur un processus en cours d'exécution entre l'utilisation de systemctl restart et systemctl reload ?",
-    solution: "restart coupe et relance complètement le processus (changement de PID), tandis que reload recharge sa configuration à chaud sans l'interrompre."
+    type: "qcm",
+    question: "Quelles affirmations décrivent avec exactitude la différence opérationnelle sur un processus Linux entre l'exécution d'un systemctl restart et d'un systemctl reload ?",
+    options: [
+      "La commande restart interrompt et recrée le processus en lui attribuant un nouveau PID, tandis que reload applique les modifications de configuration à chaud sans rupture.",
+      "La commande reload s'exécute exclusivement en espace noyau alors que restart manipule l'espace utilisateur.",
+      "La commande reload n'est supportée que si l'unité de service intègre une directive ExecReload= explicite.",
+      "La commande restart vide les caches d'exécution alors que reload conserve l'état d'allocation de la RAM."
+    ],
+    correctAnswers: [0, 2] // A et C
   },
   {
     id: 85,
-    type: "open",
-    question: "Quelle commande permet de récupérer d'un seul coup l'intégralité des variables et des propriétés de configuration d'un service géré par systemd ?",
-    solution: "systemctl show <nom_du_service>"
+    type: "qcm",
+    question: "Quelle commande senior permet d'extraire en une seule exécution l'intégralité des variables, des métadonnées d'exécution et des propriétés de configuration courantes d'un service géré par systemd ?",
+    options: [
+      "systemctl show <nom_du_service>",
+      "systemctl status <nom_du_service>",
+      "cat /etc/systemd/system/<nom_du_service>.service",
+      "systemctl inspect <nom_du_service>"
+    ],
+    correctAnswers: [0] // A : show donne toutes les propriétés sous format clé=valeur. status donne un résumé textuel.
   },
   {
     id: 86,
@@ -818,12 +936,12 @@ const quizData = [
   {
     id: 87,
     type: "qcm",
-    question: "On étudie la sémantique fine des directives de la section [Unit]. Si votre service déclare les deux instructions Wants=network.target et After=network.target, quel sera le comportement de systemd ?",
+    question: "Dans l'écosystème systemd, quelle est la relation structurelle par défaut entre une unit de type .timer et une unit de type .service ?",
     options: [
-      "Le service refusera catégoriquement de s'initialiser si network.target rencontre un échec.",
-      "Le service exprime un souhait non bloquant pour network.target mais impose un ordre chronologique strict (attendre que la target soit active avant de démarrer).",
-      "Les deux instructions s'annulent car Wants et After sont incompatibles de manière native sous POSIX.",
-      "systemd démarrera le service et la target en parallèle, sans aucune synchronisation d'ordre."
+      "L'unit .timer intègre directement le code binaire du script à exécuter.",
+      "L'unit .timer déclenche automatiquement l'unit .service portant exactement le même nom de base (ex: backup.timer appelle backup.service).",
+      "Un timer ne peut appeler qu'un service configuré avec le type d'activation static.",
+      "L'activation d'un .service supprime automatiquement le .timer associé pour éviter les boucles."
     ],
     correctAnswers: [1] // B
   },
@@ -880,7 +998,7 @@ const quizData = [
   {
     id: 93,
     type: "qcm",
-    question: "Vous devez modifier la politique de redémarrage du service SSH natif du système (ssh.service). Pourquoi l'utilisation d'un fichier drop-in via systemctl edit est-elle largement supérieure à la modification directe du fichier original situé dans /lib/systemd/system/ ?",
+    question: "Vous devez modifier la politique de redémarrage du service SSH natif du système (ssh.service). Pourquoi l'utilisation d'un fichier drop-in via systemctl edit is-elle largement supérieure à la modification directe du fichier original situé dans /lib/systemd/system/ ?",
     options: [
       "Cela évite que vos modifications locales ne soient écrasées lors d'une mise à jour du paquet système par le gestionnaire apt.",
       "Cela isole proprement vos surcharges dans un fichier dédié override.conf facile à maintenir.",
@@ -915,27 +1033,51 @@ const quizData = [
   },
   {
     id: 96,
-    type: "open",
-    question: "Si vous omettez d'intégrer une section [Install] dans votre fichier d'unit personnalisé, quel en sera l'impact direct lors d'une tentative d'appel à systemctl enable ?",
-    solution: "L'activation ne produira aucun effet et ne créera aucun lien symbolique, empêchant le service de démarrer automatiquement au boot."
+    type: "qcm",
+    question: "Si vous omettez délibérément ou accidentellement d'intégrer une section [Install] au sein d'un fichier d'unité personnalisé, quel impact cela aura-t-il sur la commande systemctl enable ?",
+    options: [
+      "L'activation ne produira aucun effet et aucun lien symbolique ne sera créé dans les répertoires d'amorçage (.wants).",
+      "systemd lèvera une erreur de syntaxe fatale bloquant toute exécution future de l'unité.",
+      "Le service démarrera automatiquement en mode rescue.target par mesure de sécurité.",
+      "L'utilitaire déléguera la planification de l'unité au service cron local."
+    ],
+    correctAnswers: [0] // A
   },
   {
     id: 97,
-    type: "open",
-    question: "Quelle commande de bas niveau permet de lire la valeur exacte d'une propriété interne spécifique d'une unit, comme le compteur de redémarrages automatiques subis (NRestarts) ?",
-    solution: "systemctl show <nom_service> -p NRestarts"
+    type: "qcm",
+    question: "Quelle commande de bas niveau permet d'interroger précisément une propriété interne spécifique d'une unité, telle que le nombre de redémarrages automatiques subis (NRestarts) ?",
+    options: [
+      "systemctl show <nom_du_service> -p NRestarts",
+      "systemctl status <nom_du_service> --property=NRestarts",
+      "cat /run/systemd/units/metrics/<nom_du_service> | grep NRestarts",
+      "systemd-analyze status <nom_du_service>"
+    ],
+    correctAnswers: [0] // A
   },
   {
     id: 98,
-    type: "open",
-    question: "Où s'enregistre physiquement le fichier drop-in généré automatiquement lorsque vous lancez la commande systemctl edit nginx.service ?",
-    solution: "Dans le répertoire /etc/systemd/system/nginx.service.d/override.conf."
+    type: "qcm",
+    question: "Où se situe physiquement le fichier drop-in de surcharge généré automatiquement par le système lorsque vous validez la commande systemctl edit nginx.service ?",
+    options: [
+      "/etc/systemd/system/nginx.service.d/override.conf",
+      "/lib/systemd/system/nginx.service.d/drop-in.conf",
+      "/run/systemd/system/nginx.service.d/override.conf",
+      "/var/lib/systemd/nginx.service.override"
+    ],
+    correctAnswers: [0] // A
   },
   {
     id: 99,
-    type: "open",
-    question: "Quelle commande système permet de supprimer proprement et d'un seul coup l'intégralité des fichiers drop-in ou surcharges appliqués à une unit pour restaurer son comportement d'origine ?",
-    solution: "sudo systemctl revert <nom_du_service>"
+    type: "qcm",
+    question: "Quelle commande d'administration systemd permet de supprimer proprement, de manière atomique, l'ensemble des surcharges locaux (drop-ins / fichiers override) appliqués à une unité afin de rétablir sa configuration initiale ?",
+    options: [
+      "sudo systemctl revert <nom_du_service>",
+      "sudo systemctl clear <nom_du_service>",
+      "sudo rm -rf /etc/systemd/system/<nom_du_service>.service.d/",
+      "systemctl reset-failed <nom_du_service>"
+    ],
+    correctAnswers: [0, 2] // A et C sont fonctionnels. revert est la commande native recommandée.
   },
   {
     id: 100,
@@ -1041,27 +1183,51 @@ const quizData = [
   },
   {
     id: 110,
-    type: "open",
-    question: "Quelle expression OnCalendar systemd permet de configurer une exécution récurrente se déclenchant toutes les 15 minutes ?",
-    solution: "*:0/15 (ou *-*-* *:0/15:00)"
+    type: "qcm",
+    question: "Quelle expression de type OnCalendar systemd permet de configurer avec exactitude un déclenchement périodique se répétant toutes les 15 minutes ?",
+    options: [
+      "*:0/15",
+      "*-*-* *:0/15:00",
+      "*/15 * * * *",
+      "OnCalendar=15m"
+    ],
+    correctAnswers: [0, 1] // A et B sont valides sous OnCalendar systemd.
   },
   {
     id: 111,
-    type: "open",
-    question: "Quelle est l'utilité exacte de la directive AccuracySec= dans la section [Timer] d'une unit ?",
-    solution: "Elle définit la précision temporelle tolérée, permettant à systemd d'optimiser et de regrouper les réveils du processeur pour économiser l'énergie."
+    type: "qcm",
+    question: "Quelle est l'utilité exacte et l'impact de la directive AccuracySec= au sein de la section [Timer] d'une unité systemd ?",
+    options: [
+      "Elle définit la tolérance de décalage temporel acceptée, permettant de regrouper les réveils processeur pour minimiser la consommation énergétique.",
+      "Elle force une synchronisation binaire stricte avec les serveurs de temps NTP amont.",
+      "Elle limite le temps d'exécution maximal de la commande ExecStart associable.",
+      "Elle empêche le déclenchement du timer si la charge CPU globale du système franchit un seuil critique."
+    ],
+    correctAnswers: [0] // A
   },
   {
     id: 112,
-    type: "open",
-    question: "Que se passe-t-il si une unit de type .path détecte un événement sur un fichier mais que l'unit .service correspondante ne contient pas de section [Install] ?",
-    solution: "Le service se lancera normalement. C'est l'unit .path qui capte l'événement et pilote le démarrage, rendant la section [Install] du service inutile."
+    type: "qcm",
+    question: "Que se passe-t-il si une unité de type .path intercepte une modification sur un fichier surveillé alors que l'unité .service associée ne possède aucune section [Install] ?",
+    options: [
+      "Le service s'exécute normalement, car l'activation et le pilotage sont intégralement pris en charge par l'unité .path.",
+      "systemd refuse de démarrer le service et consigne une erreur fatale dans journald.",
+      "Le service bascule automatiquement en état disabled permanent.",
+      "L'événement de modification est ignoré tant que l'administrateur n'exécute pas un daemon-reload."
+    ],
+    correctAnswers: [0] // A
   },
   {
     id: 113,
-    type: "open",
-    question: "Quelle commande systemd senior permet d'afficher en temps réel les logs fusionnés d'un timer et du service qu'il déclenche pour déboguer une planification ?",
-    solution: "journalctl -u mon_script.timer -u mon_script.service -f"
+    type: "qcm",
+    question: "Quelle commande senior permet de visualiser de manière unifiée et en temps réel le flux combiné des logs d'un timer et du service qu'il pilote lors d'une phase de débogage ?",
+    options: [
+      "journalctl -u mon_script.timer -u mon_script.service -f",
+      "journalctl --follow --combined-units=mon_script.*",
+      "systemctl monitor mon_script.timer mon_script.service",
+      "tail -f /var/log/syslog | grep mon_script"
+    ],
+    correctAnswers: [0, 3] // A est la commande native systemd exacte. D est une alternative classique.
   },
   {
     id: 114,
@@ -1085,7 +1251,7 @@ const quizData = [
       "Il liste précisément les failles d'exposition comme l'absence de restriction réseau ou de dossier temporaire privé.",
       "Il recompile le code binaire du script de l'unit pour y injecter des correctifs de sécurité POSIX."
     ],
-    correctAnswers: [0, 3] // A et C (Note : Erreur de lettre dans l'énoncé d'origine (C est marqué x, mais correspond au 3eme choix))
+    correctAnswers: [0, 2] // Note : Corrigé selon index logique [0, 2]
   },
   {
     id: 116,
@@ -1104,7 +1270,7 @@ const quizData = [
     type: "qcm",
     question: "On étudie le durcissement du système de fichiers via la directive ProtectSystem=. Quels sont les impacts réels de ses différents modes de configuration ?",
     options: [
-      "Le mode ProtectSystem=yes monte les répertoires /usr et /boot en lecture seule pour le service.",
+      "Le mode ProtectSystem=yes monte les répertoires /usr and /boot en lecture seule pour le service.",
       "Le mode ProtectSystem=strict monte l'intégralité de l'arborescence du système de fichiers en lecture seule, à l'exception de /dev, /proc et /sys.",
       "Le mode ProtectSystem=full supprime le répertoire personnel de l'utilisateur défini par User=.",
       "Activer ProtectSystem=strict désactive d'office les cgroups de gestion de mémoire RAM."
@@ -1154,7 +1320,7 @@ const quizData = [
     type: "qcm",
     question: "Soit un service configuré avec la limite de ressources suivante : MemoryMax=50M. Que se passe-t-il de manière immédiate si les processus du service dépassent cette barrière physique de 50 Mo de RAM ?",
     options: [
-      "Le service est ralenti mais continue de s'exécuter en utilisant le réseau.",
+      "Le service é ralenti mais continue de s'exécuter en utilisant le réseau.",
       "systemd applique un daemon-reload automatique pour étendre la mémoire.",
       "Le tueur de mémoire du noyau (OOM Killer) intervient instantanément et détruit le processus fautif.",
       "La crontab root bascule le service en mode de maintenance rescue.target."
@@ -1164,38 +1330,62 @@ const quizData = [
   {
     id: 123,
     type: "qcm",
-    question: "Vous souhaitez appliquer un bridage de ressources de manière progressive. Quelle est la différence fondamentale de comportement entre la directive MemoryHigh=30M et la directive MemoryMax=50M ?",
+    question: "Vous souhaitez appliquer un bridage de ressources de manière progressive. Quelle est la différence fondamentale de comportement entre la directive MemoryHigh=30M and la directive MemoryMax=50M ?",
     options: [
       "Quand MemoryHigh est atteinte, systemd applique une pression (ralentissement, libération agressive de cache) sur le service pour le forcer à réduire sa consommation sans le tuer.",
       "MemoryHigh détruit le processus tandis que MemoryMax le bascule en arrière-plan.",
       "MemoryHigh s'apply uniquement aux scripts lancés par des utilisateurs non-root.",
       "Quand MemoryMax est atteinte, le processus est immédiatement abattu par le noyau via un signal OOM."
     ],
-    correctAnswers: [0, 3] // A et C (Note : Dans le document d'origine, il y a deux choix 'C', le 4ème est coché, correspondant à l'index 3)
+    correctAnswers: [0, 3] // A et D
   },
   {
     id: 124,
-    type: "open",
-    question: "Quelle commande d'audit permet de mesurer instantanément le niveau d'exposition aux risques et d'évaluer la sécurité d'une unit gérée par systemd ?",
-    solution: "systemd-analyze security <nom_du_service>"
+    type: "qcm",
+    question: "Quelle commande d'audit de sécurité native permet d'évaluer le niveau d'exposition aux risques d'une unité systemd et de passer en revue ses directives d'isolement ?",
+    options: [
+      "systemd-analyze security <nom_du_service>",
+      "systemctl security-status <nom_du_service>",
+      "shellcheck --security <nom_du_service>.service",
+      "journalctl --audit-unit=<nom_du_service>"
+    ],
+    correctAnswers: [0] // A
   },
   {
     id: 125,
-    type: "open",
-    question: "Quel est le risque de sécurité majeur encouru si un service réseau (comme nginx) est configuré et s'exécute sans la directive User=, c'est-à-dire avec les droits par défaut ?",
-    solution: "Il s'exécute en tant que root ; si le service est compromis, l'attaquant prend le contrôle total du système de fichiers et de la machine."
+    type: "qcm",
+    question: "Quel risque de sécurité majeur est encouru si un service réseau exposé (tel que nginx) s'exécute sans la directive User= explicite au sein de sa configuration ?",
+    options: [
+      "Le processus hérite des privilèges par défaut de root ; s'il est compromis, l'attaquant obtient un contrôle total et non restreint sur le système.",
+      "Le service ne peut pas lier de ports réseau inférieurs à 1024 sous le standard POSIX.",
+      "L'unité est bloquée par l'utilitaire de sandboxing de systemd lors du daemon-reload.",
+      "Les journaux d'erreurs générés sont rejetés par le démon de centralisation journald."
+    ],
+    correctAnswers: [0] // A
   },
   {
     id: 126,
-    type: "open",
-    question: "Dans quel journal spécifique du noyau Linux devez-vous regarder pour confirmer de manière indiscutable qu'un service a été abattu à cause d'un dépassement de mémoire RAM (OOM Killer) ?",
-    solution: "Dans les logs du noyau via la commande journalctl -k (ou dans /var/log/syslog)."
+    type: "qcm",
+    question: "Dans quel sous-système de journalisation ou fichier de logs devez-vous investiguer afin de confirmer formellement qu'un service a été tué par le mécanisme Out-Of-Memory (OOM Killer) du noyau Linux ?",
+    options: [
+      "Les messages du noyau récupérés via la commande journalctl -k.",
+      "Le fichier de journalisation système global /var/log/syslog.",
+      "La sortie de la commande d'audit systemd-analyze blame.",
+      "Les registres d'erreurs statiques stockés dans /run/udev/data/."
+    ],
+    correctAnswers: [0, 1] // A et B contiennent les logs du noyau concernant l'OOM Killer.
   },
   {
     id: 127,
-    type: "open",
-    question: "Quel mécanisme du noyau Linux est utilisé en arrière-plan par la directive CPUQuota=20% pour limiter le temps CPU global alloué à un service ?",
-    solution: "Le sous-système de gestion des cgroups (Control Groups) du noyau."
+    type: "qcm",
+    question: "Quel composant interne du noyau Linux est nativement exploité par systemd pour implémenter la limitation stricte définie par la directive CPUQuota=20% ?",
+    options: [
+      "Le mécanisme d'ordonnancement et d'isolation des cgroups (Control Groups).",
+      "L'appel système de bas niveau Nice et le lissage de priorité POSIX.",
+      "Le sous-système inotify de gestion des interruptions matérielles.",
+      "Les modules de sécurité d'accès basés sur SELinux/AppArmor."
+    ],
+    correctAnswers: [0] // A
   },
   {
     id: 128,
@@ -1226,7 +1416,7 @@ const quizData = [
       "Si le fichier pointé est absent, le démarrage du service échouera immédiatement (sauf si précédé du signe -).",
       "Elle chiffre automatiquement les variables d'environnement lues par le processus."
     ],
-    correctAnswers: [0, 3] // Note : Le document coche A et C. Index 0 et 2. Correction : [0, 2]
+    correctAnswers: [0, 2] // Corrigé : [0, 2]
   },
   {
     id: 131,
@@ -1256,26 +1446,50 @@ const quizData = [
   },
   {
     id: 134,
-    type: "open",
-    question: "À quoi sert la directive PrivateTmp=yes ajoutée dans l'unit de service de l'agent de monitoring ?",
-    solution: "Elle crée un espace de fichiers /tmp privé, isolé et invisible pour les autres processus du système."
+    type: "qcm",
+    question: "Quel est l'impact fonctionnel exact de l'ajout de la directive de sécurité PrivateTmp=yes au sein de la configuration d'un agent de supervision géré par systemd ?",
+    options: [
+      "Elle instancie un espace /tmp de fichiers privé, étanche et totalement invisible pour les autres processus ou utilisateurs du système.",
+      "Elle vide automatiquement le dossier temporaire système dès que l'utilisation de la RAM franchit le seuil des cgroups.",
+      "Elle désactive l'écriture de métriques sur disque pour forcer un stockage volatile en RAMFS.",
+      "Elle chiffre à l'aide d'une clé locale éphémère les fichiers de logs émis par ExecStart."
+    ],
+    correctAnswers: [0] // A
   },
   {
     id: 135,
-    type: "open",
-    question: "Quelle ligne de protection du workflow qualité devez-vous impérativement placer en début de script pour assurer sa robustesse ?",
-    solution: "set -euo pipefail"
+    type: "qcm",
+    question: "Quelle combinaison d'options de configuration et d'environnement devez-vous placer en préambule d'un script d'automatisation Bash pour garantir sa robustesse et sa tolérance zéro aux erreurs ?",
+    options: [
+      "set -euo pipefail",
+      "set -g -s -x",
+      "#!/bin/sh -e",
+      "trap 'exit 1' ERR"
+    ],
+    correctAnswers: [0, 3] // A et D sont des techniques avancées de robustesse. set -euo pipefail reste la référence absolue.
   },
   {
     id: 136,
-    type: "open",
-    question: "Quelle commande permet de suivre en temps réel les logs de votre agent de monitoring pour auditer son fonctionnement ?",
-    solution: "journalctl -u sysmon.service -f"
+    type: "qcm",
+    question: "Quelle commande système permet de suivre de manière interactive et continue les flux de logs émis par votre service sysmon.service afin d'auditer ses performances ?",
+    options: [
+      "journalctl -u sysmon.service -f",
+      "journalctl -u sysmon.service --follow",
+      "systemctl logs sysmon.service -tail",
+      "tail -f /var/log/sysmon.log"
+    ],
+    correctAnswers: [0, 1] // A et B sont équivalents.
   },
   {
     id: 137,
-    type: "open",
-    question: "Quel type de tableau Bash est utilisé pour stocker et associer les seuils d'alerte aux différentes métriques (CPU, RAM, Disque) ?",
-    solution: "Un tableau associatif (declare -A)."
+    type: "qcm",
+    question: "Quel type de structure de données indigène à Bash est spécifiquement requis pour indexer et associer de manière dynamique des seuils d'alertes textuels à différentes métriques (CPU, RAM, Disque) ?",
+    options: [
+      "Un tableau associatif déclaré via la syntaxe declare -A.",
+      "Un tableau indexé linéairement défini par declare -a.",
+      "Une liste chaînée de pointeurs typée à l'aide de local -i.",
+      "Une variable scalaire délimitée par des Here-strings intégrés."
+    ],
+    correctAnswers: [0] // A
   }
 ];

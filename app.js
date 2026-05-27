@@ -5,6 +5,8 @@ let currentQuestionsList = [...quizData];
 let currentQuestionIndex = 0;
 // Objet de stockage des réponses utilisateur : { id_question: 'correct' | 'wrong' | 'unanswered' }
 let userProgress = {};
+// Tableau stockant l'ordre mélangé des index d'options pour la question courante
+let currentMappedOptionsOrder = [];
 
 // Initialisation de l'avancement pour toutes les questions du référentiel
 quizData.forEach(q => {
@@ -13,11 +15,14 @@ quizData.forEach(q => {
 
 // Sélecteurs DOM
 const questionCard = document.getElementById('question-card');
-const btnNext = document.getElementById('btn-next');
+const btnAction = document.getElementById('btn-action'); // Bouton unique dynamique (Valider / Suivant)
 const btnRestartAll = document.getElementById('btn-restart-all');
 const btnFilterErrors = document.getElementById('btn-filter-errors');
 const progressText = document.getElementById('progress-text');
 const progressFill = document.getElementById('progress-fill');
+
+// État local de la question : 'selecting' (en cours de choix) ou 'validated' (correction affichée)
+let currentQuestionState = 'selecting';
 
 // Lancement de l'application au chargement de la page
 document.addEventListener('DOMContentLoaded', () => {
@@ -27,9 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Gestion des écouteurs globaux (Navbar et contrôles principaux)
 function setupGlobalEvents() {
-    btnNext.addEventListener('click', () => {
-        currentQuestionIndex++;
-        renderCurrentQuestion();
+    btnAction.addEventListener('click', () => {
+        if (currentQuestionState === 'selecting') {
+            handleValidation();
+        } else {
+            currentQuestionIndex++;
+            renderCurrentQuestion();
+        }
     });
 
     btnRestartAll.addEventListener('click', () => {
@@ -45,9 +54,6 @@ function setupGlobalEvents() {
 
 // Fonction maîtresse d'affichage de la question courante
 function renderCurrentQuestion() {
-    // Masquer le bouton suivant par défaut à chaque nouvelle carte
-    btnNext.classList.add('hidden');
-    
     // Vérification de la fin de la liste actuelle
     if (currentQuestionIndex >= currentQuestionsList.length) {
         renderEndScreen();
@@ -56,6 +62,14 @@ function renderCurrentQuestion() {
 
     const q = currentQuestionsList[currentQuestionIndex];
     updateProgressBar();
+    
+    // Réinitialisation de l'état de la question
+    currentQuestionState = 'selecting';
+    
+    // Configuration initiale du bouton d'action pour la phase de sélection
+    btnAction.classList.remove('hidden');
+    btnAction.className = 'btn btn-primary';
+    btnAction.innerText = 'Valider';
 
     // Construction dynamique du gabarit de la carte
     let htmlContent = `
@@ -72,24 +86,30 @@ function renderCurrentQuestion() {
 
     if (q.type === 'qcm') {
         htmlContent += `<div class="options-group">`;
-        q.options.forEach((option, idx) => {
+        
+        // Génération d'un ordre aléatoire pour les options de cette question
+        // On crée un tableau d'index [0, 1, 2, ...] et on le mélange
+        currentMappedOptionsOrder = q.options.map((_, idx) => idx);
+        shuffleArray(currentMappedOptionsOrder);
+
+        // Rendu des options selon l'ordre mélangé
+        currentMappedOptionsOrder.forEach((originalIdx) => {
             htmlContent += `
-                <button class="option-btn" data-index="${idx}">
-                    ${escapeHtml(option)}
+                <button class="option-btn" data-original-index="${originalIdx}">
+                    <span class="checkbox-indicator"></span>
+                    <span class="option-text-content">${escapeHtml(q.options[originalIdx])}</span>
                 </button>
             `;
         });
         htmlContent += `</div>`;
         
         questionCard.innerHTML = htmlContent;
-        setupQcmInteractions(q);
+        setupQcmInteractions();
         
     } else if (q.type === 'open') {
         htmlContent += `
             <div class="open-answer-zone">
                 <textarea class="answer-input" id="open-input" placeholder="Saisissez votre réponse technique ici..."></textarea>
-                <button id="btn-validate-open" class="btn btn-primary">Valider ma réponse</button>
-                
                 <div id="solution-container" class="hidden">
                     <div class="solution-box">
                         <div class="solution-title">Correction Officielle :</div>
@@ -109,79 +129,81 @@ function renderCurrentQuestion() {
     }
 }
 
-// Logique d'interaction et de correction instantanée pour les QCM
-function setupQcmInteractions(questionObj) {
+// Logique de sélection multiple libre (type case à cocher)
+function setupQcmInteractions() {
     const optionButtons = questionCard.querySelectorAll('.option-btn');
-    let selectedIndices = [];
-    const totalCorrectAnswers = questionObj.correctAnswers.length;
 
     optionButtons.forEach(btn => {
         btn.addEventListener('click', function() {
-            const indexClicked = parseInt(this.dataset.index, 10);
-            
-            // Gestion multi-réponses ou réponse unique
-            if (totalCorrectAnswers === 1) {
-                // Cas standard : un seul choix possible
-                selectedIndices.push(indexClicked);
-                processQcmEvaluation(questionObj, selectedIndices, optionButtons);
+            if (currentQuestionState !== 'selecting') return;
+
+            // Alterne l'état sélectionné au clic
+            if (this.classList.contains('primary-selected')) {
+                this.classList.remove('primary-selected');
             } else {
-                // Cas multi-sélections : on colore temporairement et on attend
-                if (!this.classList.contains('primary-selected')) {
-                    this.classList.add('primary-selected');
-                    this.style.borderColor = "var(--primary)";
-                    selectedIndices.push(indexClicked);
-                }
-                
-                // Si l'utilisateur a sélectionné le nombre attendu de bonnes réponses
-                if (selectedIndices.length === totalCorrectAnswers) {
-                    processQcmEvaluation(questionObj, selectedIndices, optionButtons);
-                }
+                this.classList.add('primary-selected');
             }
         });
     });
 }
 
-function processQcmEvaluation(questionObj, selectedIndices, optionButtons) {
-    // Désactiver tous les boutons pour figer le choix
-    optionButtons.forEach(b => b.disabled = true);
+// Traitement lors du clic sur "Valider"
+function handleValidation() {
+    const q = currentQuestionsList[currentQuestionIndex];
 
-    // Vérifier si toutes les réponses choisies sont correctes
-    const isAllCorrect = selectedIndices.length === questionObj.correctAnswers.length &&
-                          selectedIndices.every(val => questionObj.correctAnswers.includes(val));
+    if (q.type === 'qcm') {
+        const optionButtons = questionCard.querySelectorAll('.option-btn');
+        let selectedOriginalIndices = [];
 
-    // Coloriage dynamique basé sur les index réels
-    optionButtons.forEach((btn, idx) => {
-        if (questionObj.correctAnswers.includes(idx)) {
-            btn.classList.add('correct'); // La bonne réponse s'affiche toujours en vert
-        } else if (selectedIndices.includes(idx)) {
-            btn.classList.add('wrong'); // Les choix faux de l'utilisateur s'affichent en rouge
-        }
-    });
+        // Collecte des sélections de l'utilisateur
+        optionButtons.forEach(btn => {
+            btn.disabled = true; // Fige les choix
+            if (btn.classList.contains('primary-selected')) {
+                selectedOriginalIndices.push(parseInt(btn.dataset.originalIndex, 10));
+            }
+        });
 
-    // Enregistrement de l'état
-    userProgress[questionObj.id] = isAllCorrect ? 'correct' : 'wrong';
-    
-    // Affichage du bouton de progression
-    btnNext.classList.remove('hidden');
-}
+        // Validation stricte : exactitude du nombre et des éléments choisis
+        const isAllCorrect = selectedOriginalIndices.length === q.correctAnswers.length &&
+                              selectedOriginalIndices.every(val => q.correctAnswers.includes(val));
 
-// Logique pour les questions ouvertes (Option A)
-function setupOpenInteractions(questionObj) {
-    const btnValidateOpen = document.getElementById('btn-validate-open');
-    const openInput = document.getElementById('open-input');
-    const solutionContainer = document.getElementById('solution-container');
-    const btnJuste = document.getElementById('eval-juste');
-    const btnFaux = document.getElementById('eval-faux');
+        // Coloriage final basé sur les index réels/originaux du fichier questions.js
+        optionButtons.forEach(btn => {
+            const idx = parseInt(btn.dataset.originalIndex, 10);
+            if (q.correctAnswers.includes(idx)) {
+                btn.classList.add('correct'); // La bonne réponse s'affiche toujours en vert
+            } else if (btn.classList.contains('primary-selected')) {
+                btn.classList.add('wrong'); // Les choix faux sélectionnés passent en rouge
+            }
+            btn.classList.remove('primary-selected');
+        });
 
-    btnValidateOpen.addEventListener('click', () => {
+        // Enregistrement de la progression
+        userProgress[q.id] = isAllCorrect ? 'correct' : 'wrong';
+
+        // Transformation du bouton d'action vers l'état suivant
+        currentQuestionState = 'validated';
+        btnAction.className = 'btn btn-next-action';
+        btnAction.innerText = 'Question suivante →';
+
+    } else if (q.type === 'open') {
+        const openInput = document.getElementById('open-input');
         if (!openInput.value.trim()) {
             alert("Veuillez saisir une réponse avant de valider.");
             return;
         }
         openInput.disabled = true;
-        btnValidateOpen.classList.add('hidden');
-        solutionContainer.classList.remove('hidden');
-    });
+        
+        // Cache le bouton principal temporairement pour forcer l'auto-évaluation
+        btnAction.classList.add('hidden');
+        document.getElementById('solution-container').classList.remove('hidden');
+    }
+}
+
+// Logique pour les questions ouvertes (Option A avec auto-évaluation)
+function setupOpenInteractions(questionObj) {
+    const btnJuste = document.getElementById('eval-juste');
+    const btnFaux = document.getElementById('eval-faux');
 
     btnJuste.addEventListener('click', () => {
         userProgress[questionObj.id] = 'correct';
@@ -211,7 +233,6 @@ function updateProgressBar() {
 
 // Écran de fin personnalisé
 function renderEndScreen() {
-    // Calcul des statistiques sur le pool de la session actuelle
     let sessionCorrect = 0;
     let sessionWrong = 0;
     
@@ -222,6 +243,7 @@ function renderEndScreen() {
 
     progressText.innerText = "Session terminée !";
     progressFill.style.width = "100%";
+    btnAction.classList.add('hidden');
 
     questionCard.innerHTML = `
         <div class="question-text" style="text-align: center;">Félicitations, vous avez terminé cette session !</div>
@@ -237,7 +259,6 @@ function renderEndScreen() {
         </div>
     `;
 
-    // Événements de l'écran final
     document.getElementById('btn-final-all').addEventListener('click', resetQuizFull);
     if (sessionWrong > 0) {
         document.getElementById('btn-final-errors').addEventListener('click', filterToErrorsOnly);
@@ -270,11 +291,10 @@ function filterToErrorsAndUnanswered() {
     renderCurrentQuestion();
 }
 
-// 3. Filtrage ciblé depuis l'écran de fin (uniquement les erreurs de la session)
+// 3. Filtrage ciblé depuis l'écran de fin
 function filterToErrorsOnly() {
     const filtered = quizData.filter(q => userProgress[q.id] === 'wrong');
     
-    // On remet ces erreurs à l'état non répondu pour le nouveau cycle
     filtered.forEach(q => {
         userProgress[q.id] = 'unanswered';
     });
@@ -282,6 +302,14 @@ function filterToErrorsOnly() {
     currentQuestionsList = filtered;
     currentQuestionIndex = 0;
     renderCurrentQuestion();
+}
+
+// Algorithme de mélange aléatoire d'un tableau en place (Fisher-Yates)
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
 }
 
 // Utilitaire de sécurisation des chaînes de caractères (anti-XSS)

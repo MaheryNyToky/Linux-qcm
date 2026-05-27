@@ -6,10 +6,9 @@
     --text-muted: #6c757d;
     --border-color: #dee2e6;
     
-    --primary: #0d6efd;
-    --primary-hover: #0b5ed7;
-    --secondary: #495057;
-    --secondary-hover: #343a40;
+    --primary: #3b82f6;
+    --primary-hover: #1d4ed8;
+    --primary-selected-bg: #eff6ff;
     
     --success: #198754;
     --success-bg: #d1e7dd;
@@ -34,10 +33,10 @@ body {
     background-color: var(--bg-color);
     color: var(--text-main);
     line-height: 1.6;
-    padding-top: 70px; /* Espace pour la navbar fixe */
+    padding-top: 70px;
 }
 
-/* Barre de navigation / Outils globale */
+/* Barre de navigation */
 .quiz-navbar {
     position: fixed;
     top: 0;
@@ -105,7 +104,7 @@ body {
     transition: width 0.3s ease;
 }
 
-/* Carte de Question (Zone dynamique) */
+/* Carte de Question */
 .question-card {
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -148,11 +147,14 @@ pre {
     margin-top: 20px;
 }
 
+/* Structuration des boutons d'options en éléments de formulaire */
 .option-btn {
+    display: flex;
+    align-items: center;
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
-    padding: 14px 20px;
+    padding: 16px 20px;
     text-align: left;
     font-size: 1rem;
     cursor: pointer;
@@ -161,30 +163,99 @@ pre {
 }
 
 .option-btn:hover:not(:disabled) {
-    background-color: #f1f3f5;
-    border-color: #bcd1ee;
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
 }
 
-/* États de validation QCM */
+/* Indicateur visuel checkbox customisé */
+.checkbox-indicator {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #cbd5e1;
+    border-radius: 6px;
+    margin-right: 15px;
+    flex-shrink: 0;
+    display: inline-block;
+    position: relative;
+    transition: var(--transition);
+}
+
+.option-text-content {
+    color: var(--text-main);
+}
+
+/* État : Sélectionné (Avant validation) */
+.option-btn.primary-selected {
+    background-color: var(--primary-selected-bg);
+    border-color: var(--primary);
+}
+
+.option-btn.primary-selected .checkbox-indicator {
+    border-color: var(--primary);
+    background-color: var(--primary);
+}
+
+.option-btn.primary-selected .checkbox-indicator::after {
+    content: "✓";
+    position: absolute;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* États de validation post-clic */
 .option-btn.correct {
     background-color: var(--success-bg) !important;
     border-color: var(--success) !important;
-    color: var(--success);
+}
+.option-btn.correct .option-text-content {
+    color: var(--success) !important;
     font-weight: 600;
+}
+.option-btn.correct .checkbox-indicator {
+    border-color: var(--success) !important;
+    background-color: var(--success) !important;
+}
+.option-btn.correct .checkbox-indicator::after {
+    content: "✓";
+    position: absolute;
+    color: white;
+    font-size: 12px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .option-btn.wrong {
     background-color: var(--danger-bg) !important;
     border-color: var(--danger) !important;
-    color: var(--danger);
+}
+.option-btn.wrong .option-text-content {
+    color: var(--danger) !important;
+}
+.option-btn.wrong .checkbox-indicator {
+    border-color: var(--danger) !important;
+    background-color: var(--danger) !important;
+}
+.option-btn.wrong .checkbox-indicator::after {
+    content: "✗";
+    position: absolute;
+    color: white;
+    font-size: 12px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .option-btn:disabled {
     cursor: not-allowed;
-    opacity: 0.8;
+    opacity: 0.9;
 }
 
-/* Zone Question Ouverte (Option A) */
+/* Zone Question Ouverte */
 .open-answer-zone {
     margin-top: 20px;
 }
@@ -204,7 +275,7 @@ pre {
 .answer-input:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .solution-box {
@@ -235,11 +306,11 @@ pre {
     color: var(--secondary);
 }
 
-/* Boutons */
+/* Boutons de contrôle et d'action */
 .btn {
-    padding: 10px 20px;
+    padding: 12px 24px;
     font-size: 0.95rem;
-    font-weight: 500;
+    font-weight: 600;
     border-radius: var(--radius);
     border: none;
     cursor: pointer;
@@ -249,21 +320,37 @@ pre {
 .btn-primary {
     background-color: var(--primary);
     color: white;
+    width: 100%; /* S'étend sur toute la largeur pour correspondre au design moderne */
 }
 .btn-primary:hover { background-color: var(--primary-hover); }
 
-.btn-secondary {
-    background-color: #e9ecef;
-    color: var(--secondary);
+/* Nouveau style pour l'état "Question suivante" du bouton principal */
+.btn-next-action {
+    background-color: #1e293b;
+    color: white;
+    width: 100%;
+    padding: 12px 24px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
 }
-.btn-secondary:hover { background-color: #dee2e6; }
+.btn-next-action:hover { background-color: #0f172a; }
+
+.btn-secondary {
+    background-color: #e2e8f0;
+    color: #475569;
+}
+.btn-secondary:hover { background-color: #cbd5e1; }
 
 .btn-filter {
-    background-color: #fff3cd;
-    color: #664d03;
-    border: 1px solid #ffe69c;
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
 }
-.btn-filter:hover { background-color: #ffecb5; }
+.btn-filter:hover { background-color: #fcd34d; }
 
 .btn-success {
     background-color: var(--success);
@@ -280,7 +367,7 @@ pre {
 /* Zone de Navigation Basse */
 .navigation-zone {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     margin-top: 20px;
 }
 
